@@ -1,0 +1,76 @@
+class Solution {
+    public long findKthSmallest(int[] coins, int k) {
+        List<Integer> filtered = new ArrayList<>();
+        Arrays.sort(coins);
+        for (int i = 0; i < coins.length; i++) {
+            boolean redundant = false;
+            for (int j = 0; j < i; j++) {
+                if (coins[i] % coins[j] == 0) {
+                    redundant = true;
+                    break;
+                }
+            }
+            if (!redundant) filtered.add(coins[i]);
+        }
+        
+        int[] coinArr = filtered.stream().mapToInt(i -> i).toArray();
+        int n = coinArr.length;
+        long[] lcmCache = new long[1 << n];
+        int[] bitCount = new int[1 << n];
+        
+        for (int mask = 1; mask < (1 << n); mask++) {
+            int lsb = mask & -mask;
+            int prev = mask ^ lsb;
+            int idx = Integer.numberOfTrailingZeros(lsb);
+            if (prev == 0) {
+                lcmCache[mask] = coinArr[idx];
+            } else {
+                lcmCache[mask] = lcm(lcmCache[prev], coinArr[idx]);
+            }
+            bitCount[mask] = bitCount[prev] + 1;
+        }
+        
+        long low = 1;
+        long high = (long) k * coinArr[0];
+        long answer = high;
+        
+        while (low <= high) {
+            long mid = low + (high - low) / 2;
+            if (count(mid, coinArr, lcmCache, bitCount) >= k) {
+                answer = mid;
+                high = mid - 1;
+            } else {
+                low = mid + 1;
+            }
+        }
+        return answer;
+    }
+    
+    private long count(long x, int[] coins, long[] lcmCache, int[] bitCount) {
+        long total = 0;
+        int limit = 1 << coins.length;
+        for (int mask = 1; mask < limit; mask++) {
+            long lcm = lcmCache[mask];
+            if (lcm > x) continue;
+            if (bitCount[mask] % 2 == 1) {
+                total += x / lcm;
+            } else {
+                total -= x / lcm;
+            }
+        }
+        return total;
+    }
+    
+    private long lcm(long a, long b) {
+        return a / gcd(a, b) * b;
+    }
+    
+    private long gcd(long a, long b) {
+        while (b != 0) {
+            long temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+}
