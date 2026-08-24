@@ -1,0 +1,20 @@
+class Solution { 
+    public int stoneGameVIII(int[] stones) { 
+        int n = stones.length; 
+ 
+        long sum = 0; 
+ 
+        for (int x : stones) { 
+            sum += x; 
+        } 
+ 
+        long best = sum; 
+ 
+        for (int i = n - 1; i >= 2; i--) { 
+            sum -= stones[i]; 
+            best = Math.max(best, sum - best); 
+        } 
+ 
+        return (int) best; 
+    } 
+}
