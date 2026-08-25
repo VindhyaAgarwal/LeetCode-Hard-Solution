@@ -1,0 +1,77 @@
+class Solution {
+    private static final int MOD = 1_000_000_007;
+
+    public int subsequencePairCount(int[] nums) {
+        int m = 0;
+
+        for (int x : nums)
+            if (x > m) m = x;
+
+        int size = (m + 1) * (m + 1);
+        int[] dp = new int[size];
+        int[] next = new int[size];
+
+        dp[0] = 1;
+
+        int[][] gcd = new int[m + 1][m + 1];
+
+        for (int x = 1; x <= m; x++)
+            for (int g = 0; g <= m; g++)
+                gcd[x][g] = gcd(x, g);
+
+        for (int x : nums) {
+            java.util.Arrays.fill(next, 0);
+
+            for (int g1 = 0; g1 <= m; g1++) {
+                int base = g1 * (m + 1);
+
+                for (int g2 = 0; g2 <= m; g2++) {
+                    int ways = dp[base + g2];
+
+                    if (ways == 0) continue;
+
+                    int index = base + g2;
+                    int value = next[index] + ways;
+                    if (value >= MOD) value -= MOD;
+                    next[index] = value;
+
+                    int ng1 = gcd[x][g1];
+                    index = ng1 * (m + 1) + g2;
+
+                    value = next[index] + ways;
+                    if (value >= MOD) value -= MOD;
+                    next[index] = value;
+
+                    int ng2 = gcd[x][g2];
+                    index = base + ng2;
+
+                    value = next[index] + ways;
+                    if (value >= MOD) value -= MOD;
+                    next[index] = value;
+                }
+            }
+
+            int[] temp = dp;
+            dp = next;
+            next = temp;
+        }
+
+        long answer = 0;
+
+        for (int g = 1; g <= m; g++) {
+            answer += dp[g * (m + 1) + g];
+            if (answer >= MOD) answer -= MOD;
+        }
+
+        return (int) answer;
+    }
+
+    private int gcd(int a, int b) {
+        while (b != 0) {
+            int t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
+    }
+}
