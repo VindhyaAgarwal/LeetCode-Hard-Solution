@@ -1,1 +1,62 @@
+import java.util.*;
 
+class Solution {
+    public String lexPalindromicPermutation(String s, String target) {
+        int[] left = new int[26];
+        for (char c : s.toCharArray()) left[c - 'a']++;
+        
+        char midCh = 0;
+        for (int i = 0; i < 26; i++) {
+            if (left[i] % 2 == 1) {
+                if (midCh != 0) return "";
+                midCh = (char)(i + 'a');
+                left[i]--;
+            }
+        }
+        
+        int n = s.length();
+        for (char c : target.substring(0, n/2).toCharArray()) left[c - 'a'] -= 2;
+        
+        int neg = 0, leftMax = 0;
+        for (int i = 0; i < 26; i++) {
+            if (left[i] < 0) neg++;
+            else if (left[i] > 0) leftMax = Math.max(leftMax, i);
+        }
+        
+        if (neg == 0) {
+            String leftS = target.substring(0, n/2);
+            String rightS = (midCh == 0 ? "" : String.valueOf(midCh)) + new StringBuilder(leftS).reverse().toString();
+            if (rightS.compareTo(target.substring(n/2)) > 0) return leftS + rightS;
+        }
+        
+        for (int i = n/2 - 1; i >= 0; i--) {
+            int b = target.charAt(i) - 'a';
+            left[b] += 2;
+            if (left[b] == 0) neg--;
+            else if (left[b] == 2) leftMax = Math.max(leftMax, b);
+            
+            if (neg > 0 || leftMax <= b) continue;
+            
+            int j = b + 1;
+            while (left[j] == 0) j++;
+            
+            left[j] -= 2;
+            StringBuilder res = new StringBuilder(target.substring(0, i + 1));
+            res.setCharAt(i, (char)(j + 'a'));
+            
+            for (int k = 0; k < 26; k++) {
+                for (int cnt = 0; cnt < left[k] / 2; cnt++) {
+                    res.append((char)(k + 'a'));
+                }
+            }
+            
+            StringBuilder rightS = new StringBuilder(res);
+            rightS.reverse();
+            if (midCh != 0) res.append(midCh);
+            res.append(rightS);
+            return res.toString();
+        }
+        
+        return "";
+    }
+}
