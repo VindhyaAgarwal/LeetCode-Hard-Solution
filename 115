@@ -1,0 +1,25 @@
+class Solution {
+    public int numDistinct(String s, String t) {
+        char[] sc = s.toCharArray();
+        char[] tc = t.toCharArray();
+        int m = sc.length;
+        int n = tc.length;
+        
+        if (n > m) return 0;
+        
+        int[] dp = new int[n + 1];
+        dp[0] = 1;
+        
+        for (int i = 0; i < m; i++) {
+            char c = sc[i];
+            int end = Math.min(i + 1, n);
+            for (int j = end; j > 0; j--) {
+                if (c == tc[j - 1]) {
+                    dp[j] = dp[j] + dp[j - 1];
+                }
+            }
+        }
+        
+        return dp[n];
+    }
+}
