@@ -1,0 +1,164 @@
+import java.util.*;
+
+class Solution {
+    public int[] maximumWeight(List<List<Integer>> intervals) {
+        int n = intervals.size();
+        int[][] arr = new int[n][4];
+        for (int i = 0; i < n; i++) {
+            List<Integer> it = intervals.get(i);
+            arr[i][0] = it.get(0);
+            arr[i][1] = it.get(1);
+            arr[i][2] = it.get(2);
+            arr[i][3] = i;
+        }
+
+        Arrays.sort(arr, (a, b) -> a[1] != b[1] ? a[1] - b[1] : a[3] - b[3]);
+
+        int[] endTimes = new int[n];
+        for (int i = 0; i < n; i++) endTimes[i] = arr[i][1];
+
+        int[] prev = new int[n];
+        for (int i = 0; i < n; i++) {
+            int start = arr[i][0];
+            int lo = 0, hi = i - 1, res = -1;
+            while (lo <= hi) {
+                int mid = (lo + hi) >>> 1;
+                if (endTimes[mid] < start) { res = mid; lo = mid + 1; }
+                else hi = mid - 1;
+            }
+            prev[i] = res;
+        }
+
+        final int stride = 5;
+        int totalStates = (n + 1) * stride;
+        long[] dp = new long[totalStates];
+        int[] cnt = new int[totalStates];
+        int[] idx = new int[totalStates * 4];
+
+        Arrays.fill(dp, -1);
+        dp[0] = 0;
+
+        int[] tmp = new int[4];
+
+        for (int i = 1; i <= n; i++) {
+            int curBase = i * stride;
+            int prevRowBase = (i - 1) * stride;
+            int weight = arr[i - 1][2];
+            int originalIndex = arr[i - 1][3];
+            int pBase = (prev[i - 1] + 1) * stride;
+
+            for (int j = 0; j <= 4; j++) {
+                int cur = curBase + j;
+                int skipState = prevRowBase + j;
+
+                long best = dp[skipState];
+                int bestCnt = cnt[skipState];
+                boolean takeBest = false;
+                int pState = -1;
+
+                if (j > 0) {
+                    int ps = pBase + j - 1;
+                    long pd = dp[ps];
+                    if (pd >= 0) {
+                        long cand = pd + weight;
+                        if (cand > best) {
+                            best = cand;
+                            bestCnt = cnt[ps] + 1;
+                            takeBest = true;
+                            pState = ps;
+                        } else if (cand == best && best >= 0) {
+                            // compare merged(idx[ps], originalIndex) vs idx[skipState]
+                            int pLen = cnt[ps];
+                            int sLen = cnt[skipState];
+                            int pOff = ps * 4;
+                            int sOff = skipState * 4;
+
+                            // build merged into tmp
+                            int pos = 0, k = 0;
+                            boolean ins = false;
+                            while (k < pLen) {
+                                int v = idx[pOff + k];
+                                if (!ins && originalIndex < v) { tmp[pos++] = originalIndex; ins = true; }
+                                tmp[pos++] = v;
+                                k++;
+                            }
+                            if (!ins) tmp[pos++] = originalIndex;
+                            int mLen = pos;
+
+                            int minLen = mLen < sLen ? mLen : sLen;
+                            int cmp = 0;
+                            for (int t = 0; t < minLen; t++) {
+                                int a = tmp[t];
+                                int b = idx[sOff + t];
+                                if (a != b) { cmp = a < b ? -1 : 1; break; }
+                            }
+                            if (cmp == 0) cmp = mLen < sLen ? -1 : (mLen > sLen ? 1 : 0);
+
+                            if (cmp < 0) {
+                                best = cand;
+                                bestCnt = mLen;
+                                takeBest = true;
+                                pState = ps;
+                            }
+                        }
+                    }
+                }
+
+                if (best < 0) {
+                    dp[cur] = -1;
+                    cnt[cur] = 0;
+                    continue;
+                }
+                dp[cur] = best;
+
+                if (!takeBest) {
+                    cnt[cur] = cnt[skipState];
+                    System.arraycopy(idx, skipState * 4, idx, cur * 4, cnt[cur]);
+                } else {
+                    // tmp already holds the merged array (or rebuild if cand > best path)
+                    int pLen = cnt[pState];
+                    int off = pState * 4;
+                    int curOff = cur * 4;
+                    int pos = 0, k = 0;
+                    boolean ins = false;
+                    while (k < pLen) {
+                        int v = idx[off + k];
+                        if (!ins && originalIndex < v) { idx[curOff + pos++] = originalIndex; ins = true; }
+                        idx[curOff + pos++] = v;
+                        k++;
+                    }
+                    if (!ins) idx[curOff + pos++] = originalIndex;
+                    cnt[cur] = pos;
+                }
+            }
+        }
+
+        long bestWeight = -1;
+        int bestState = -1;
+        int nBase = n * stride;
+        for (int j = 0; j <= 4; j++) {
+            long w = dp[nBase + j];
+            if (w < 0) continue;
+            if (w > bestWeight) {
+                bestWeight = w;
+                bestState = nBase + j;
+            } else if (w == bestWeight) {
+                int aOff = (nBase + j) * 4, aLen = cnt[nBase + j];
+                int bOff = bestState * 4, bLen = cnt[bestState];
+                int minLen = aLen < bLen ? aLen : bLen;
+                int cmp = 0;
+                for (int k = 0; k < minLen; k++) {
+                    int x = idx[aOff + k], y = idx[bOff + k];
+                    if (x != y) { cmp = x < y ? -1 : 1; break; }
+                }
+                if (cmp == 0) cmp = aLen < bLen ? -1 : (aLen > bLen ? 1 : 0);
+                if (cmp < 0) bestState = nBase + j;
+            }
+        }
+
+        int c = cnt[bestState];
+        int[] result = new int[c];
+        System.arraycopy(idx, bestState * 4, result, 0, c);
+        return result;
+    }
+}
