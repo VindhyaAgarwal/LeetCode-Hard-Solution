@@ -1,0 +1,189 @@
+import java.util.*;
+
+class Solution {
+    private int k;
+    private int n;
+    private int[] tp;
+    private int[] tf;
+    private int[][] valid;
+
+    public int[] resultArray(int[] nums, int k, int[][] queries) {
+        this.k = k;
+        this.n = nums.length;
+
+        tp = new int[4 * n];
+        tf = new int[4 * n * k];
+
+        valid = new int[k][];
+        for (int p = 0; p < k; p++) {
+            int[] temp = new int[k];
+            int sz = 0;
+            for (int x = 0; x < k; x++) {
+                if ((p * x) % k == 0) temp[sz++] = x;
+            }
+            valid[p] = Arrays.copyOf(temp, sz);
+        }
+
+        build(1, 0, n - 1, nums);
+
+        int[] res = new int[queries.length];
+        int[] rp = new int[1];
+
+        for (int q = 0; q < queries.length; q++) {
+            int idx = queries[q][0];
+            int val = queries[q][1] % k;
+            int st = queries[q][2];
+            int xi = queries[q][3];
+
+            upd(1, 0, n - 1, idx, val);
+
+            rp[0] = 1;
+            res[q] = qry(1, 0, n - 1, st, xi, rp);
+        }
+
+        return res;
+    }
+
+    private void build(int nd, int l, int r, int[] nums) {
+        if (l == r) {
+            int v = nums[l] % k;
+            tp[nd] = v;
+            tf[nd * k + v] = 1;
+            return;
+        }
+
+        int m = (l + r) >>> 1;
+        int lc = nd << 1;
+        int rc = lc | 1;
+
+        build(lc, l, m, nums);
+        build(rc, m + 1, r, nums);
+        pull(nd);
+    }
+
+    private void pull(int nd) {
+        int lc = nd << 1;
+        int rc = lc | 1;
+
+        tp[nd] = (tp[lc] * tp[rc]) % k;
+
+        int base = nd * k;
+        int lbase = lc * k;
+        int rbase = rc * k;
+
+        Arrays.fill(tf, base, base + k, 0);
+
+        for (int i = 0; i < k; i++) {
+            tf[base + i] = tf[lbase + i];
+        }
+
+        int lp = tp[lc];
+
+        for (int i = 0; i < k; i++) {
+            int cnt = tf[rbase + i];
+            if (cnt != 0) {
+                tf[base + (lp * i) % k] += cnt;
+            }
+        }
+    }
+
+    private void upd(int nd, int l, int r, int idx, int val) {
+        if (l == r) {
+            tp[nd] = val;
+
+            int base = nd * k;
+            Arrays.fill(tf, base, base + k, 0);
+            tf[base + val] = 1;
+            return;
+        }
+
+        int m = (l + r) >>> 1;
+        int lc = nd << 1;
+
+        if (idx <= m) {
+            upd(lc, l, m, idx, val);
+        } else {
+            upd(lc | 1, m + 1, r, idx, val);
+        }
+
+        pull(nd);
+    }
+
+    private int qry(int nd, int l, int r, int st, int xi, int[] rp) {
+        if (r < st) return 0;
+
+        if (l >= st) {
+            int p = rp[0];
+            int base = nd * k;
+            int cnt = 0;
+
+            for (int x : validFor(p, xi)) {
+                cnt += tf[base + x];
+            }
+
+            rp[0] = (p * tp[nd]) % k;
+            return cnt;
+        }
+
+        int m = (l + r) >>> 1;
+
+        int cnt = qry(nd << 1, l, m, st, xi, rp);
+        cnt += qry((nd << 1) | 1, m + 1, r, st, xi, rp);
+
+        return cnt;
+    }
+
+    private int[] validFor(int p, int x) {
+        int g = gcd(p, k);
+
+        if (x % g != 0) return EMPTY;
+
+        int mod = k / g;
+        int target = x / g;
+        int a = p / g;
+
+        int inv = inverse(a, mod);
+        int first = (target * inv) % mod;
+
+        int[] ans = new int[g];
+
+        for (int i = 0; i < g; i++) {
+            ans[i] = first + i * mod;
+        }
+
+        return ans;
+    }
+
+    private static final int[] EMPTY = new int[0];
+
+    private int gcd(int a, int b) {
+        while (b != 0) {
+            int t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
+    }
+
+    private int inverse(int a, int mod) {
+        if (mod == 1) return 0;
+
+        int b = mod;
+        int u = 1;
+        int v = 0;
+
+        while (b != 0) {
+            int t = a / b;
+
+            int temp = a - t * b;
+            a = b;
+            b = temp;
+
+            temp = u - t * v;
+            u = v;
+            v = temp;
+        }
+
+        return (u % mod + mod) % mod;
+    }
+}
