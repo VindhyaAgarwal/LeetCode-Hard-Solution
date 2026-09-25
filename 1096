@@ -1,0 +1,45 @@
+class Solution {
+    private int i = 0;
+    private String s;
+
+    public List<String> braceExpansionII(String e) {
+        s = e;
+        i = 0;
+        List<String> r = new ArrayList<>(expr());
+        Collections.sort(r);
+        return r;
+    }
+
+    private Set<String> expr() {
+        Set<String> r = prod();
+        while (i < s.length() && s.charAt(i) == ',') {
+            i++;
+            r.addAll(prod());
+        }
+        return r;
+    }
+
+    private Set<String> prod() {
+        Set<String> r = new HashSet<>();
+        r.add("");
+
+        while (i < s.length() && s.charAt(i) != ',' && s.charAt(i) != '}') {
+            Set<String> f;
+            if (s.charAt(i) == '{') {
+                i++;
+                f = expr();
+                i++;
+            } else {
+                f = new HashSet<>();
+                f.add(String.valueOf(s.charAt(i)));
+                i++;
+            }
+            Set<String> n = new HashSet<>();
+            for (String a : r)
+                for (String b : f)
+                    n.add(a + b);
+            r = n;
+        }
+        return r;
+    }
+}
