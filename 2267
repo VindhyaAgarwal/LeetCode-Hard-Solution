@@ -1,0 +1,67 @@
+class Solution {
+    public boolean hasValidPath(char[][] grid) {
+        int m = grid.length, n = grid[0].length;
+        int len = m + n - 1;
+
+        if ((len & 1) != 0) return false;
+        if (grid[0][0] == ')' || grid[m - 1][n - 1] == '(')
+            return false;
+
+        int words = (len + 64) >>> 6;
+
+        long[][] dp = new long[n][words];
+        long[] temp = new long[words];
+
+        dp[0][0] = 1L << 1;
+
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (i == 0 && j == 0) continue;
+
+                long[] top = dp[j];
+                long[] left = j > 0 ? dp[j - 1] : null;
+
+                for (int w = 0; w < words; w++) {
+                    temp[w] = top[w] | (left == null ? 0L : left[w]);
+                }
+
+                if (grid[i][j] == '(') {
+                    long carry = 0;
+
+                    for (int w = 0; w < words; w++) {
+                        long x = temp[w];
+                        top[w] = (x << 1) | carry;
+                        carry = x >>> 63;
+                    }
+                } else {
+                    long carry = 0;
+
+                    for (int w = words - 1; w >= 0; w--) {
+                        long x = temp[w];
+                        top[w] = (x >>> 1) | carry;
+                        carry = x << 63;
+                    }
+                }
+
+                int maxBal = Math.min(
+                    i + j + 1,
+                    (m - 1 - i) + (n - 1 - j)
+                );
+
+                int lastWord = maxBal >>> 6;
+                if (lastWord + 1 < words) {
+                    java.util.Arrays.fill(
+                        top, lastWord + 1, words, 0L
+                    );
+                }
+
+                int bits = (maxBal & 63) + 1;
+                if (bits < 64) {
+                    top[lastWord] &= (1L << bits) - 1;
+                }
+            }
+        }
+
+        return (dp[n - 1][0] & 1L) != 0;
+    }
+}
