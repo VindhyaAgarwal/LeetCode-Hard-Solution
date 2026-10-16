@@ -1,0 +1,59 @@
+class Solution {
+    static final int MOD = 1_000_000_007;
+
+    long[] sum, sq, lazy;
+    int size;
+
+    public int sumCounts(int[] nums) {
+        int n = nums.length;
+        size = 1;
+        while (size < n) size <<= 1;
+
+        sum  = new long[size << 1];
+        sq   = new long[size << 1];
+        lazy = new long[size];
+
+        int[] last = new int[100001];
+        long ans = 0;
+
+        for (int i = 0; i < n; i++) {
+            update(1, 0, size - 1, last[nums[i]], i);
+            last[nums[i]] = i + 1;
+            ans += sq[1];
+        }
+        return (int) (ans % MOD);
+    }
+
+    private void update(int p, int l, int r, int ql, int qr) {
+        if (ql <= l && r <= qr) {
+            long length = r - l + 1;
+            sq[p] += 2 * sum[p] + length;
+            sum[p] += length;
+            if (l != r) lazy[p]++;
+            return;
+        }
+
+        long v = lazy[p];
+        int m = (l + r) >>> 1;
+        int lc = p << 1, rc = lc | 1;
+
+        if (v != 0) {
+            long llen = m - l + 1, rlen = r - m;
+            sq[lc] += 2 * v * sum[lc] + v * v * llen;
+            sum[lc] += v * llen;
+            if (lc < size) lazy[lc] += v;
+
+            sq[rc] += 2 * v * sum[rc] + v * v * rlen;
+            sum[rc] += v * rlen;
+            if (rc < size) lazy[rc] += v;
+
+            lazy[p] = 0;
+        }
+
+        if (ql <= m) update(lc, l, m, ql, qr);
+        if (qr > m)  update(rc, m + 1, r, ql, qr);
+
+        sum[p] = sum[lc] + sum[rc];
+        sq[p]  = sq[lc]  + sq[rc];
+    }
+}
