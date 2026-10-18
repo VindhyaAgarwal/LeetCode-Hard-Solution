@@ -1,0 +1,49 @@
+class Solution {
+    private static final int MOD = 1_000_000_007;
+    private long[] fact, invFact;
+
+    public int numOfWays(int[] nums) {
+        int n = nums.length;
+        fact = new long[n + 1];
+        invFact = new long[n + 1];
+        fact[0] = 1;
+        for (int i = 1; i <= n; i++) fact[i] = fact[i - 1] * i % MOD;
+        invFact[n] = modPow(fact[n], MOD - 2);
+        for (int i = n; i > 0; i--) invFact[i - 1] = invFact[i] * i % MOD;
+
+        List<Integer> list = new ArrayList<>();
+        for (int num : nums) list.add(num);
+        return (int) ((countWays(list) - 1 + MOD) % MOD);
+    }
+
+    private long countWays(List<Integer> list) {
+        if (list.size() <= 1) return 1;
+        int root = list.get(0);
+        List<Integer> left = new ArrayList<>();
+        List<Integer> right = new ArrayList<>();
+        for (int i = 1; i < list.size(); i++) {
+            int v = list.get(i);
+            if (v < root) left.add(v);
+            else right.add(v);
+        }
+        long res = countWays(left) * countWays(right) % MOD;
+        int ls = left.size(), rs = right.size();
+        res = res * comb(ls + rs, ls) % MOD;
+        return res;
+    }
+
+    private long comb(int n, int k) {
+        return fact[n] * invFact[k] % MOD * invFact[n - k] % MOD;
+    }
+
+    private long modPow(long b, long e) {
+        long r = 1;
+        b %= MOD;
+        while (e > 0) {
+            if ((e & 1) == 1) r = r * b % MOD;
+            b = b * b % MOD;
+            e >>= 1;
+        }
+        return r;
+    }
+}
