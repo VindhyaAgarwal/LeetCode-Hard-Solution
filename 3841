@@ -1,0 +1,138 @@
+class Solution {
+    public List<Boolean> palindromePath(int n, int[][] edges, String s, String[] queries) {
+        List<Integer>[] graph = new List[n];
+        for (int i = 0; i < n; i++) graph[i] = new ArrayList<>();
+        for (int[] e : edges) {
+            graph[e[0]].add(e[1]);
+            graph[e[1]].add(e[0]);
+        }
+        
+        char[] chars = s.toCharArray();
+        int[] parent = new int[n];
+        int[] depth = new int[n];
+        int[] size = new int[n];
+        int[] heavy = new int[n];
+        int[] head = new int[n];
+        int[] pos = new int[n];
+        Arrays.fill(heavy, -1);
+        parent[0] = -1;
+        
+        int[] order = new int[n];
+        int oi = 0;
+        int[] stack = new int[n];
+        int sp = 0;
+        stack[sp++] = 0;
+        boolean[] visited = new boolean[n];
+        visited[0] = true;
+        while (sp > 0) {
+            int u = stack[--sp];
+            order[oi++] = u;
+            for (int v : graph[u]) {
+                if (!visited[v]) {
+                    visited[v] = true;
+                    parent[v] = u;
+                    depth[v] = depth[u] + 1;
+                    stack[sp++] = v;
+                }
+            }
+        }
+        
+        for (int i = n - 1; i >= 0; i--) {
+            int u = order[i];
+            size[u] = 1;
+            int maxS = 0;
+            for (int v : graph[u]) {
+                if (v != parent[u]) {
+                    size[u] += size[v];
+                    if (size[v] > maxS) {
+                        maxS = size[v];
+                        heavy[u] = v;
+                    }
+                }
+            }
+        }
+        
+        int curPos = 0;
+        int[] queue = new int[n];
+        int qh = 0, qt = 0;
+        queue[qt++] = 0;
+        head[0] = 0;
+        while (qh < qt) {
+            int start = queue[qh++];
+            int u = start;
+            while (u != -1) {
+                head[u] = start;
+                pos[u] = curPos++;
+                for (int v : graph[u]) {
+                    if (v != parent[u] && v != heavy[u]) {
+                        head[v] = v;
+                        queue[qt++] = v;
+                    }
+                }
+                u = heavy[u];
+            }
+        }
+        
+        int[] base = new int[n];
+        for (int i = 0; i < n; i++) base[pos[i]] = 1 << (chars[i] - 'a');
+        
+        int[] seg = new int[4 * n];
+        build(seg, base, 1, 0, n - 1);
+        
+        List<Boolean> result = new ArrayList<>();
+        
+        for (String q : queries) {
+            if (q.charAt(0) == 'u') {
+                int i = 7;
+                int u = 0;
+                while (q.charAt(i) != ' ') { u = u * 10 + (q.charAt(i) - '0'); i++; }
+                char c = q.charAt(i + 1);
+                chars[u] = c;
+                update(seg, 1, 0, n - 1, pos[u], 1 << (c - 'a'));
+            } else {
+                int i = 6;
+                int u = 0;
+                while (q.charAt(i) != ' ') { u = u * 10 + (q.charAt(i) - '0'); i++; }
+                i++;
+                int v = 0;
+                while (i < q.length()) { v = v * 10 + (q.charAt(i) - '0'); i++; }
+                int mask = 0;
+                while (head[u] != head[v]) {
+                    if (depth[head[u]] < depth[head[v]]) { int t = u; u = v; v = t; }
+                    mask ^= query(seg, 1, 0, n - 1, pos[head[u]], pos[u]);
+                    u = parent[head[u]];
+                }
+                if (depth[u] > depth[v]) { int t = u; u = v; v = t; }
+                mask ^= query(seg, 1, 0, n - 1, pos[u], pos[v]);
+                result.add((mask & (mask - 1)) == 0);
+            }
+        }
+        
+        return result;
+    }
+    
+    private void build(int[] seg, int[] base, int node, int l, int r) {
+        if (l == r) { seg[node] = base[l]; return; }
+        int mid = (l + r) >> 1;
+        build(seg, base, node << 1, l, mid);
+        build(seg, base, node << 1 | 1, mid + 1, r);
+        seg[node] = seg[node << 1] ^ seg[node << 1 | 1];
+    }
+    
+    private void update(int[] seg, int node, int l, int r, int p, int val) {
+        if (l == r) { seg[node] = val; return; }
+        int mid = (l + r) >> 1;
+        if (p <= mid) update(seg, node << 1, l, mid, p, val);
+        else update(seg, node << 1 | 1, mid + 1, r, p, val);
+        seg[node] = seg[node << 1] ^ seg[node << 1 | 1];
+    }
+    
+    private int query(int[] seg, int node, int l, int r, int ql, int qr) {
+        if (ql <= l && r <= qr) return seg[node];
+        int mid = (l + r) >> 1;
+        int res = 0;
+        if (ql <= mid) res ^= query(seg, node << 1, l, mid, ql, qr);
+        if (qr > mid) res ^= query(seg, node << 1 | 1, mid + 1, r, ql, qr);
+        return res;
+    }
+}
