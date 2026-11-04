@@ -1,0 +1,84 @@
+class Solution {
+    public long minOperations(int[] nums, int x, int k) {
+        int n = nums.length;
+        long[] cost = new long[n - x + 1];
+
+        TreeMap<Integer, Integer> lower = new TreeMap<>();
+        TreeMap<Integer, Integer> upper = new TreeMap<>();
+        long lowerSum = 0, upperSum = 0;
+        int lowerSize = 0, upperSize = 0;
+
+        for (int i = 0; i < n; i++) {
+            int v = nums[i];
+            if (lowerSize == 0 || v <= lower.lastKey()) {
+                lower.merge(v, 1, Integer::sum);
+                lowerSum += v;
+                lowerSize++;
+            } else {
+                upper.merge(v, 1, Integer::sum);
+                upperSum += v;
+                upperSize++;
+            }
+            while (lowerSize > upperSize + 1) {
+                int mv = lower.lastKey();
+                lowerSum -= mv; lowerSize--;
+                if (lower.get(mv) == 1) lower.remove(mv); else lower.merge(mv, -1, Integer::sum);
+                upper.merge(mv, 1, Integer::sum);
+                upperSum += mv; upperSize++;
+            }
+            while (upperSize > lowerSize) {
+                int mv = upper.firstKey();
+                upperSum -= mv; upperSize--;
+                if (upper.get(mv) == 1) upper.remove(mv); else upper.merge(mv, -1, Integer::sum);
+                lower.merge(mv, 1, Integer::sum);
+                lowerSum += mv; lowerSize++;
+            }
+
+            if (i >= x) {
+                int out = nums[i - x];
+                if (out <= lower.lastKey()) {
+                    lowerSum -= out; lowerSize--;
+                    if (lower.get(out) == 1) lower.remove(out); else lower.merge(out, -1, Integer::sum);
+                } else {
+                    upperSum -= out; upperSize--;
+                    if (upper.get(out) == 1) upper.remove(out); else upper.merge(out, -1, Integer::sum);
+                }
+                while (lowerSize > upperSize + 1) {
+                    int mv = lower.lastKey();
+                    lowerSum -= mv; lowerSize--;
+                    if (lower.get(mv) == 1) lower.remove(mv); else lower.merge(mv, -1, Integer::sum);
+                    upper.merge(mv, 1, Integer::sum);
+                    upperSum += mv; upperSize++;
+                }
+                while (upperSize > lowerSize) {
+                    int mv = upper.firstKey();
+                    upperSum -= mv; upperSize--;
+                    if (upper.get(mv) == 1) upper.remove(mv); else upper.merge(mv, -1, Integer::sum);
+                    lower.merge(mv, 1, Integer::sum);
+                    lowerSum += mv; lowerSize++;
+                }
+            }
+
+            if (i >= x - 1) {
+                long median = lower.lastKey();
+                cost[i - x + 1] = median * lowerSize - lowerSum + upperSum - median * upperSize;
+            }
+        }
+
+        long INF = Long.MAX_VALUE / 2;
+        long[] prev = new long[n + 1]; 
+        for (int j = 1; j <= k; j++) {
+            long[] cur = new long[n + 1];
+            java.util.Arrays.fill(cur, INF);
+            for (int pos = 1; pos <= n; pos++) {
+                cur[pos] = cur[pos - 1];
+                if (pos >= x && prev[pos - x] < INF) {
+                    long cand = prev[pos - x] + cost[pos - x];
+                    if (cand < cur[pos]) cur[pos] = cand;
+                }
+            }
+            prev = cur;
+        }
+        return prev[n];
+    }
+}
