@@ -1,0 +1,148 @@
+class Solution {
+    public long minOperations(int[] nums, int x, int k) {
+        int n = nums.length;
+        long[] cost = new long[n - x + 1];
+
+        final long OFF = 2_000_000L;
+        final int SHIFT = 20;
+        final long MASK = (1L << SHIFT) - 1;
+
+        long[] lowHeap = new long[n]; int lowSz = 0;
+        long[] upHeap  = new long[n]; int upSz  = 0;
+        boolean[] removed = new boolean[n];
+
+        long lowerSum = 0, upperSum = 0;
+        int lowerSize = 0, upperSize = 0;
+
+        for (int i = 0; i < n; i++) {
+            long v = nums[i];
+            long packed = ((v + OFF) << SHIFT) | i;
+            if (lowerSize == 0 || v <= ((lowHeap[0] >> SHIFT) - OFF)) {
+                lowSz = pushMax(lowHeap, lowSz, packed);
+                lowerSum += v; lowerSize++;
+            } else {
+                upSz = pushMin(upHeap, upSz, packed);
+                upperSum += v; upperSize++;
+            }
+            while (lowSz > 0 && removed[(int)(lowHeap[0] & MASK)]) lowSz = popMax(lowHeap, lowSz);
+            while (upSz > 0 && removed[(int)(upHeap[0] & MASK)]) upSz = popMin(upHeap, upSz);
+
+            if (lowerSize > upperSize + 1) {
+                long p = lowHeap[0]; lowSz = popMax(lowHeap, lowSz);
+                long mv = (p >> SHIFT) - OFF;
+                lowerSum -= mv; lowerSize--;
+                upSz = pushMin(upHeap, upSz, p);
+                upperSum += mv; upperSize++;
+            }
+            if (upperSize > lowerSize) {
+                long p = upHeap[0]; upSz = popMin(upHeap, upSz);
+                long mv = (p >> SHIFT) - OFF;
+                upperSum -= mv; upperSize--;
+                lowSz = pushMax(lowHeap, lowSz, p);
+                lowerSum += mv; lowerSize++;
+            }
+
+            if (i >= x) {
+                int outIdx = i - x;
+                long out = nums[outIdx];
+                removed[outIdx] = true;
+                if (lowerSize > 0 && out <= ((lowHeap[0] >> SHIFT) - OFF)) {
+                    lowerSum -= out; lowerSize--;
+                } else {
+                    upperSum -= out; upperSize--;
+                }
+                while (lowSz > 0 && removed[(int)(lowHeap[0] & MASK)]) lowSz = popMax(lowHeap, lowSz);
+                while (upSz > 0 && removed[(int)(upHeap[0] & MASK)]) upSz = popMin(upHeap, upSz);
+
+                if (lowerSize > upperSize + 1) {
+                    long p = lowHeap[0]; lowSz = popMax(lowHeap, lowSz);
+                    long mv = (p >> SHIFT) - OFF;
+                    lowerSum -= mv; lowerSize--;
+                    upSz = pushMin(upHeap, upSz, p);
+                    upperSum += mv; upperSize++;
+                }
+                if (upperSize > lowerSize) {
+                    long p = upHeap[0]; upSz = popMin(upHeap, upSz);
+                    long mv = (p >> SHIFT) - OFF;
+                    upperSum -= mv; upperSize--;
+                    lowSz = pushMax(lowHeap, lowSz, p);
+                    lowerSum += mv; lowerSize++;
+                }
+            }
+
+            if (i >= x - 1) {
+                long median = (lowHeap[0] >> SHIFT) - OFF;
+                cost[i - x + 1] = median * lowerSize - lowerSum + upperSum - median * upperSize;
+            }
+        }
+
+        long INF = Long.MAX_VALUE / 2;
+        long[] prev = new long[n + 1];
+        for (int j = 1; j <= k; j++) {
+            long[] cur = new long[n + 1];
+            java.util.Arrays.fill(cur, INF);
+            for (int pos = 1; pos <= n; pos++) {
+                long best = cur[pos - 1];
+                if (pos >= x && prev[pos - x] < INF) {
+                    long cand = prev[pos - x] + cost[pos - x];
+                    if (cand < best) best = cand;
+                }
+                cur[pos] = best;
+            }
+            prev = cur;
+        }
+        return prev[n];
+    }
+
+    private static int pushMax(long[] h, int sz, long p) {
+        h[sz] = p;
+        int i = sz++;
+        while (i > 0) {
+            int par = (i - 1) >> 1;
+            if (h[par] >= h[i]) break;
+            long t = h[par]; h[par] = h[i]; h[i] = t;
+            i = par;
+        }
+        return sz;
+    }
+
+    private static int popMax(long[] h, int sz) {
+        h[0] = h[--sz];
+        int i = 0;
+        while (true) {
+            int l = 2 * i + 1, r = l + 1, m = i;
+            if (l < sz && h[l] > h[m]) m = l;
+            if (r < sz && h[r] > h[m]) m = r;
+            if (m == i) break;
+            long t = h[m]; h[m] = h[i]; h[i] = t;
+            i = m;
+        }
+        return sz;
+    }
+
+    private static int pushMin(long[] h, int sz, long p) {
+        h[sz] = p;
+        int i = sz++;
+        while (i > 0) {
+            int par = (i - 1) >> 1;
+            if (h[par] <= h[i]) break;
+            long t = h[par]; h[par] = h[i]; h[i] = t;
+            i = par;
+        }
+        return sz;
+    }
+
+    private static int popMin(long[] h, int sz) {
+        h[0] = h[--sz];
+        int i = 0;
+        while (true) {
+            int l = 2 * i + 1, r = l + 1, m = i;
+            if (l < sz && h[l] < h[m]) m = l;
+            if (r < sz && h[r] < h[m]) m = r;
+            if (m == i) break;
+            long t = h[m]; h[m] = h[i]; h[i] = t;
+            i = m;
+        }
+        return sz;
+    }
+}
