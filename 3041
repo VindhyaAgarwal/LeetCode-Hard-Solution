@@ -1,0 +1,21 @@
+class Solution {
+    public int maxSelectedElements(int[] nums) {
+        int max = 0;
+        for (int x : nums) if (x > max) max = x;
+        int[] cnt = new int[max + 1];
+        for (int x : nums) cnt[x]++;
+        int[] dp = new int[max + 2];
+        int ans = 0;
+        for (int v = 1; v <= max; v++) {
+            while (cnt[v]-- > 0) {
+                int a = dp[v - 1] + 1;
+                int b = dp[v] + 1;
+                if (a > dp[v]) dp[v] = a;
+                if (b > dp[v + 1]) dp[v + 1] = b;
+                if (dp[v] > ans) ans = dp[v];
+                if (dp[v + 1] > ans) ans = dp[v + 1];
+            }
+        }
+        return ans;
+    }
+}
